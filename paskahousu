@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Edu Jump</title>
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no" />
+  <link rel="icon" href="TemplateData/favicon.ico" sizes="any" />
+  <link rel="stylesheet" href="TemplateData/style.css" />
+</head>
+<body>
+  <!-- Portrait‐mode overlay -->
+  <div id="rotate-overlay">
+    Please rotate your device<br>to landscape
+  </div>
+
+  <!-- Unity container (4:3 box) -->
+  <div id="unity-container" style="display: none;">
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
+    <div id="unity-loading-bar">
+      <div id="unity-progress-bar-empty">
+        <div id="unity-progress-bar-full"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Detect mobile vs desktop
+    const isMobile = /Mobi|Android|iP(ad|hone)/i.test(navigator.userAgent);
+
+    // --- Elements
+    const container = document.getElementById('unity-container');
+    const canvas    = document.getElementById('unity-canvas');
+    const overlay   = document.getElementById('rotate-overlay');
+    const loadingFull = document.getElementById('unity-progress-bar-full');
+    let unityStarted = false;
+
+    // --- Resize logic: fit 4:3 box & DPI
+    function resizeAll(instance) {
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+      let cw = W, ch = W * 3/4;
+      if (ch > H) {
+        ch = H;
+        cw = H * 4/3;
+      }
+      container.style.width  = cw + 'px';
+      container.style.height = ch + 'px';
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width  = cw * dpr;
+      canvas.height = ch * dpr;
+      canvas.style.width  = cw + 'px';
+      canvas.style.height = ch + 'px';
+      if (instance) instance.Module.canvas = canvas;
+    }
+
+    // --- Show overlay if mobile+portrait, otherwise start Unity
+    const phonePortraitMQ = window.matchMedia('(max-width: 768px) and (orientation: portrait)');
+    phonePortraitMQ.addEventListener('change', checkReady);
+
+    function checkReady() {
+      if (phonePortraitMQ.matches) {
+        overlay.style.display   = 'flex';
+        container.style.display = 'none';
+      } else {
+        overlay.style.display   = 'none';
+        container.style.display = 'block';
+      }
+    }
+    window.addEventListener('resize',        checkReady);
+    window.addEventListener('orientationchange', checkReady);
+
+    setInterval(checkReady, 1000); // Check every second
+
+    // --- Load & launch Unity (once)
+    function startUnity() {
+      if (unityStarted) return;
+      unityStarted = true;
+
+      const buildUrl  = 'Build';
+      const loaderUrl = buildUrl + '/511e2d4209bc4a700d23e9dd9635633a.loader.js';
+      const config = {
+        dataUrl:         buildUrl + '/033e941ec3606e21a848769d5d598894.data.gz',
+        frameworkUrl:    buildUrl + '/3f6d000f4caf6fec800f9a8293628fce.framework.js.gz',
+        codeUrl:         buildUrl + '/37137871b99bb188ce1d9687c3e4fa93.wasm.gz',
+        streamingAssetsUrl: 'StreamingAssets',
+        companyName:     "LukuSeula Oy",
+        productName:     "Edu Jump",
+        productVersion:  "1.3.6"
+      };
+
+      const script = document.createElement('script');
+      script.src = loaderUrl;
+      script.onload = () => {
+        createUnityInstance(canvas, config, p => {
+          loadingFull.style.width = (100 * p) + '%';
+        })
+        .then(instance => {
+          window.unityInstance = instance;
+          document.getElementById('unity-loading-bar').style.display = 'none';
+          resizeAll(instance);
+          window.addEventListener('resize', () => resizeAll(instance));
+        })
+        .catch(console.error);
+      };
+      document.body.appendChild(script);
+    }
+
+    // --- First tap: fullscreen + landscape lock
+    // function onFirstGesture() {
+    //   document.documentElement.requestFullscreen?.().catch(()=>{});
+    //   screen.orientation?.lock('landscape-primary').catch(()=>{});
+    //   window.removeEventListener('click',      onFirstGesture);
+    //   window.removeEventListener('touchstart', onFirstGesture);
+    // }
+    // window.addEventListener('click',      onFirstGesture, { once: true });
+    // window.addEventListener('touchstart', onFirstGesture, { once: true });
+
+    // --- Kick off
+    // checkReady();
+    startUnity();
+  </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"987c7debc9a14dcf887cece7a9d4deef","spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
